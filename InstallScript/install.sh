@@ -39,54 +39,55 @@ systemctl start firewalld
 cd /var/www
 wget https://github.com/juice-shop/juice-shop/releases/download/v17.1.1/juice-shop-17.1.1_node18_linux_x64.tgz
 tar zxvf juice-shop-17.1.1_node18_linux_x64.tgz 
-mv juice-shop-17.1.1 juice-shop
+mv juice-shop_17.1.1 juice-shop
 cd juice-shop
-npm install
+chmod 777 data/ -R
 
 # Create Kestral service for the asp.net application
-#echo '
-#[Unit]
-#Description=Example .NET Web API App running on Linux
-#
-#[Service]
-#WorkingDirectory=/var/www/App/
-#ExecStart=/.dotnet/dotnet /var/www/App/ociTestASPNET.dll
-#Restart=always
-# Restart service after 10 seconds if the dotnet service crashes:
-#RestartSec=10
-#KillSignal=SIGINT
-#SyslogIdentifier=dotnet-example
-#User=ubuntu
-#Environment=ASPNETCORE_ENVIRONMENT=Production
-#Environment=DOTNET_NOLOGO=true
-#
-#[Install]
-#WantedBy=multi-user.target' | tee /etc/systemd/system/aspnetTestApp.service
+echo '
+[Unit]
+Description=Juice-shop application
 
-#systemctl enable aspnetTestApp.service
-#systemctl start aspnetTestApp.service
+[Service]
 
-# Configure nginx to serve /var/www directory
+ExecStart=npm start --prefix=/var/www/juice-shop
+RestartSec=10
+Restart=always
+
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=juice-shop
+
+Environment=PATH=/usr/bin:/usr/local/bin
+
+[Install]
+WantedBy=multi-user.target
+' | tee /etc/systemd/system/juice-shop.service
+
+systemctl enable juice-shop.service
+systemctl start juice-shop.service
+
+# Configure nginx to serve juice shop
 #mkdir -p /etc/nginx/sites-available
 #
-#echo '
-#server {
-#    listen       80;
-#    server_name  _;
-#    location / {
-#        proxy_pass         http://localhost:5000;
-#        proxy_http_version 1.1;
-#        proxy_set_header   Upgrade $http_upgrade;
-#        proxy_set_header   Connection keep-alive;
-#        proxy_set_header   Host $host;
-#        proxy_cache_bypass $http_upgrade;
-#        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
-#        proxy_set_header   X-Forwarded-Proto $scheme;
-#    }
-#}
-#' | tee /etc/nginx/sites-available/default
+echo '
+server {
+    listen       80;
+    server_name  _;
+    location / {
+        proxy_pass         http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection keep-alive;
+        proxy_set_header   Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+}
+' | tee /etc/nginx/sites-available/default
 
-#systemctl restart nginx
+systemctl restart nginx
 
 
 
